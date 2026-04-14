@@ -24,7 +24,7 @@ interface RawRow {
 
 export default function Dashboard() {
   const [branch, setBranch] = useState("");
-  const [channel, setChannel] = useState("");
+  const [channels, setChannels] = useState<string[]>([]);
   const [period, setPeriod] = useState<Period>("daily");
   const [from, setFrom] = useState("2026-03-01");
   const [to, setTo] = useState("2026-04-14");
@@ -36,11 +36,11 @@ export default function Dashboard() {
     setLoading(true);
     const params = new URLSearchParams({ period, from, to });
     if (branch) params.set("branch", branch);
-    if (channel) params.set("channel", channel);
+    for (const ch of channels) params.append("channel", ch);
 
     const promoParams = new URLSearchParams();
     if (branch) promoParams.set("branch", branch);
-    if (channel) promoParams.set("channel", channel);
+    for (const ch of channels) promoParams.append("channel", ch);
 
     const [ctrRes, promoRes] = await Promise.all([
       fetch(`/api/ctr?${params}`),
@@ -53,7 +53,7 @@ export default function Dashboard() {
     setRows(Array.isArray(ctrData) ? ctrData : []);
     setPromotions(Array.isArray(promoData) ? promoData : []);
     setLoading(false);
-  }, [branch, channel, period, from, to]);
+  }, [branch, channels, period, from, to]);
 
   useEffect(() => {
     fetchData();
@@ -79,8 +79,8 @@ export default function Dashboard() {
   const ctrChange = secCtr - firstCtr;
 
   // Chart: pivot by date, one line per channel
-  const activeChannels = channel
-    ? [channel]
+  const activeChannels = channels.length > 0
+    ? channels
     : [...new Set(rows.map((r) => r.channel))].filter((c) =>
         CHANNELS.includes(c as (typeof CHANNELS)[number]),
       );
@@ -159,12 +159,12 @@ export default function Dashboard() {
 
         <Filters
           branch={branch}
-          channel={channel}
+          channels={channels}
           period={period}
           from={from}
           to={to}
           onBranchChange={setBranch}
-          onChannelChange={setChannel}
+          onChannelsChange={setChannels}
           onPeriodChange={setPeriod}
           onFromChange={setFrom}
           onToChange={setTo}

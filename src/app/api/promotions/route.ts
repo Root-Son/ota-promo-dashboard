@@ -6,7 +6,7 @@ import { supabase } from "@/lib/supabase";
 export async function GET(req: NextRequest) {
   const sp = req.nextUrl.searchParams;
   const branch = sp.get("branch");
-  const channel = sp.get("channel");
+  const channelList = sp.getAll("channel");
   const activeOnly = sp.get("active") === "true";
 
   let query = supabase
@@ -15,7 +15,8 @@ export async function GET(req: NextRequest) {
     .order("start_date", { ascending: false });
 
   if (branch) query = query.eq("branch", branch);
-  if (channel) query = query.eq("channel", channel);
+  if (channelList.length === 1) query = query.eq("channel", channelList[0]);
+  else if (channelList.length > 1) query = query.in("channel", channelList);
   if (activeOnly) query = query.eq("is_active", true);
 
   const { data, error } = await query;

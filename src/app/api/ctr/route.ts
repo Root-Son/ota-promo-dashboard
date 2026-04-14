@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase";
 export async function GET(req: NextRequest) {
   const sp = req.nextUrl.searchParams;
   const branch = sp.get("branch");
-  const channel = sp.get("channel");
+  const channelList = sp.getAll("channel");
   const period = sp.get("period") || "daily"; // daily | weekly | monthly
   const from = sp.get("from");
   const to = sp.get("to");
@@ -16,7 +16,8 @@ export async function GET(req: NextRequest) {
     .order("date", { ascending: true });
 
   if (branch) query = query.eq("branch", branch);
-  if (channel) query = query.eq("channel", channel);
+  if (channelList.length === 1) query = query.eq("channel", channelList[0]);
+  else if (channelList.length > 1) query = query.in("channel", channelList);
   if (from) query = query.gte("date", from);
   if (to) query = query.lte("date", to);
 
