@@ -49,7 +49,7 @@ export async function POST() {
       const { error } = await supabase
         .from("ota_ctr_daily")
         .upsert(chunk, { onConflict: "date,channel,branch" });
-      if (error) throw error;
+      if (error) throw new Error(`Supabase upsert failed (chunk ${i}): ${error.message} — ${error.details || ""} — ${error.hint || ""}`);
       upserted += chunk.length;
     }
 
