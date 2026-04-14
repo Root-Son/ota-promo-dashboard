@@ -22,24 +22,33 @@ export async function POST() {
     const rows = await readSheet(SPREADSHEET_ID, `${SHEET_NAME}!A2:H`);
     if (!rows.length) return NextResponse.json({ error: "No data" }, { status: 400 });
 
-    const records = rows
-      .filter((r) => r.length >= 6 && r[0] && r[1] && r[2])
-      .map((r) => {
-        const impressions = parseNum(r[4]);
-        const clicks = parseNum(r[5]);
-        const bookings = parseNum(r[6]);
-        return {
-          date: parseDate(r[0]),
-          channel: r[1],
-          branch: r[2],
-          rank: parseNum(r[3]) || null,
-          impressions,
-          clicks,
-          bookings,
-          ctr: impressions > 0 ? Math.round((clicks / impressions) * 10000) / 10000 : 0,
-          cvr: clicks > 0 ? Math.round((bookings / clicks) * 10000) / 10000 : 0,
-        };
+    // Deduplicate by (date, channel, branch) — keep last occurrence
+    const deduped = new Map<string, {
+      date: string; channel: string; branch: string; rank: number | null;
+      impressions: number; clicks: number; bookings: number; ctr: number; cvr: number;
+    }>();
+
+    for (const r of rows) {
+      if (r.length < 6 || !r[0] || !r[1] || !r[2]) continue;
+      const impressions = parseNum(r[4]);
+      const clicks = parseNum(r[5]);
+      const bookings = parseNum(r[6]);
+      const date = parseDate(r[0]);
+      const key = `${date}|${r[1]}|${r[2]}`;
+      deduped.set(key, {
+        date,
+        channel: r[1],
+        branch: r[2],
+        rank: parseNum(r[3]) || null,
+        impressions,
+        clicks,
+        bookings,
+        ctr: impressions > 0 ? Math.round((clicks / impressions) * 10000) / 10000 : 0,
+        cvr: clicks > 0 ? Math.round((bookings / clicks) * 10000) / 10000 : 0,
       });
+    }
+
+    const records = Array.from(deduped.values());
 
     // Upsert in chunks of 500
     const chunkSize = 500;
